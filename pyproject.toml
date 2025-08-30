@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "samloader"
+version = "0.5.1"
+description = "A tool to download firmware for Samsung phones."
+readme = "README.md"
+requires-python = ">=3.6"
+license = { text = "GPL-3.0-or-later" }
+authors = [
+    { name = "ananjaser1211", email = "ananjaser@gmail.com" }
+]
+dependencies = [
+    "tqdm",
+    "pycryptodomex",
+    "requests"
+]
+
+[project.urls]
+Homepage = "https://github.com/ananjaser1211/samloader"
+
+[project.scripts]
+samloader = "samloader.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
