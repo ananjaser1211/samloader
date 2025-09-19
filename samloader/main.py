@@ -57,8 +57,9 @@ def main():
 
 def download(args):
     client = fusclient.FUSClient()
-    # We can only download latest firmwares anyway
-    args.fw_ver = versionfetch.getlatestver(args.dev_model, args.dev_region)
+
+    if not args.fw_ver:
+        args.fw_ver = versionfetch.getlatestver(args.dev_model, args.dev_region)
     path, filename, size = getbinaryfile(client, args.fw_ver, args.dev_model, args.dev_region, args.dev_imei)
     out = args.out_file if args.out_file else os.path.join(args.out_dir, filename)
     # Print information
