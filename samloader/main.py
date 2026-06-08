@@ -94,33 +94,58 @@ def download(args):
             # Auto decrypt
             auto_decrypt(args, out, filename)
         return
-    fd = open(out, "ab" if args.resume else "wb")
-    initdownload(client, filename)
-    r = client.downloadfile(path+filename, dloffset)
-    if args.show_md5 and "Content-MD5" in r.headers:
-        print("MD5:", base64.b64decode(r.headers["Content-MD5"]).hex())
 
-    log_interval = size // 10  # Log every 10%
-    progress = dloffset
+    max_retries = 5
+    attempt = 0
 
-    # Download and log progress
-    with tqdm(total=size, initial=dloffset, unit="B", unit_scale=True) as pbar:
-        for chunk in r.iter_content(chunk_size=0x10000):
-            if chunk:
-                fd.write(chunk)
-                fd.flush()
-                pbar.update(len(chunk))
-                
-                # Update progress
-                progress += len(chunk)
-                
-                # Check if it's time to log the progress
-                if progress >= log_interval:
-                    log_to_file(f"Download progress: {progress / (1024**2):.2f} MB / {size / (1024**2):.2f} MB")
-                    log_interval += size // 10
+    while attempt < max_retries:
+        try:
+            fd = open(out, "ab" if args.resume else "wb")
+            initdownload(client, filename)
+            r = client.downloadfile(path+filename, dloffset)
 
-    fd.close()
-    log_to_file("Download completed.")
+            if args.show_md5 and "Content-MD5" in r.headers:
+                print("MD5:", base64.b64decode(r.headers["Content-MD5"]).hex())
+
+            log_interval = size // 10  # Log every 10%
+            progress = dloffset
+
+            # Download and log progress
+            with tqdm(total=size, initial=dloffset, unit="B", unit_scale=True) as pbar:
+                for chunk in r.iter_content(chunk_size=0x10000):
+                    if chunk:
+                        fd.write(chunk)
+                        fd.flush()
+                        pbar.update(len(chunk))
+
+                        # Update progress
+                        progress += len(chunk)
+
+                        # Check if it's time to log the progress
+                        if progress >= log_interval:
+                            log_to_file(f"Download progress: {progress / (1024**2):.2f} MB / {size / (1024**2):.2f} MB")
+                            log_interval += size // 10
+
+            fd.close()
+            log_to_file("Download completed.")
+            break
+
+        except Exception as e:
+            attempt += 1
+            log_to_file(f"Download error (attempt {attempt}/{max_retries}): {e}")
+            print(f"Download failed (attempt {attempt}/{max_retries}), retrying...")
+
+            try:
+                fd.close()
+            except:
+                pass
+
+            if attempt >= max_retries:
+                raise
+
+            args.resume = True
+            dloffset = os.stat(out).st_size if os.path.exists(out) else 0
+
     # Auto decrypt
     auto_decrypt(args, out, filename)
 
